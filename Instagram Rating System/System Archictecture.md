@@ -4,6 +4,8 @@
 
 Social networking sites are known for presenting significant challenges in design . Imagine hundreds of millions and now probably billions use this networks everyday - this imposes computational , network and I/O demands that can be notoriously difficult to satisfy .
  A social network’s infrastructure needs to :
+
+ --
 (1) allow near real time communication - refreshing likes , comments , shares , reposts and saves .
 
 (2) aggregate content on-the-fly from multiple sources - you should see a reel, a note , a comment you shared go live.
