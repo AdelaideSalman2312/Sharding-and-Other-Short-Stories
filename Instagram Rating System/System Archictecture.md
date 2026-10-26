@@ -74,12 +74,12 @@ memcache to store pre-computed results from sophisti
 cated machine learning algorithms which can then be
 used by a variety of other applications.
 
-*Words that need non technical research and interpretation*
+<!-- *Words that need non technical research and interpretation*
 
  It takes little effort for new services to leverage the existing marcher
 infrastructure without the burden of tuning, optimizing,
 provisioning, and maintaining a large server fleet.
-Memcached provides no server to server coordination ; it is an in memeory hash table running on a single server . Their  system provides a suite of configuration , aggregation , and routing services to organize memcached instances into a distributed system.
+Memcached provides no server to server coordination ; it is an in memeory hash table running on a single server . Their  system provides a suite of configuration , aggregation , and routing services to organize memcached instances into a distributed system. -->
 
 **Themes that emerge at Meta's Three Deployment Scales**
 
@@ -87,6 +87,76 @@ The primary design concern :
 1. **read heavy workload and wide fan-out** .
 
  As the neccessity to scale multiple frontend clusters - they address data replication between the clusters 
+
+ # In a Cluster : Latency and Load
+
+NOW  we focus on the challenges of scaling to thousands
+of servers within a cluster. At this scale, most of their 
+efforts focused on reducing either the latency of fetching
+cached data or the load imposed due to a cache miss.
+
+**Reducing Latency**
+Whether a request for data results in a cache hit or miss,
+the latency of memcache’s response is a critical factor
+in the response time of a user’s request. 
+
+A single user web requests can often result in hundreds of individual memcache get requests.
+For example, loading one of our
+popular pages results in an average of 521 distinct items
+fetched from memcache.
+
+Meta  provisions hundreds of memcached servers in a
+cluster to reduce load on databases and other services.
+
+Items are distributed across the memcached servers
+through consistent hashing . Thus web servers have
+to routinely communicate with many memcached servers
+to satisfy a user request. As a result, all web servers
+communicate with every memcached server in a short
+period of time. This all-to-all communication pattern
+can cause incast congestion [30] or allow a single server
+to become the bottleneck for many web servers. Data
+replication often alleviates the single-server bottleneck
+but leads to significant memory inefficiencies in the
+common case.
+Meta mainly  reduces latency mainly by focusing on the
+memcache client, which runs on each web server. This client serves a range of functions, including serialization, compression, request routing, error handling, and request batching. Clients maintain a map of all available servers, which is updated through an auxiliary configuration system.
+
+*Tradeoff between latency and quality*
+
+This is the point I remind yu the difference between Latency and Quality and what it means for a user and a developer 
+
+**Parallel Requestss and Batching**
+
+ Meta structures their web
+application code to minimize the number of network round trips necessary to respond to page requests. We
+construct a directed acyclic graph (DAG) representing
+the dependencies between data. A web server uses this
+DAG to maximize the number of items that can be
+fetched concurrently. On average these batches consist
+of 24 keys per request(squared).
+
+**Client-Server Communication**
+
+Memcached servers do
+not communicate with each other.
+When appropriate, Meta engineers embed the complexity of the system into a stateless client rather than in the memcached servers.
+This greatly
+simplifies memcached and allows us to focus on making
+it highly performant for a more limited use case. Keep
+ing the clients stateless enables rapid iteration in the
+software and simplifies our deployment process. Client
+logic is provided as two components: a library that can
+be embedded into applications or as a standalone proxy
+named mcrouter. This proxy presents a memcached
+server interface and routes the requests/replies to/from
+other servers.
+Clients use UDP and TCP to communicate with
+memcached servers. We rely on UDP for get requests to
+reduce latency and overhead. Since UDP is connection
+less, each thread in the web server is allowed to directly
+communicate with memcached servers directly, bypass
+ing mcrouter, without establishing and maintaining a
 
 # Tech Glossary / Assignment 
 
@@ -97,10 +167,14 @@ The primary design concern :
 scribe how we built a distributed key-value store based
 on memcached capable of operating under Facebook’s
 workload
-
-
-
-
+5. How memcache handles the Celebrity Problem 
+6. All in all communication pattern  and its bottle necks 
+7. Incast Congestion 
+8. serialization, compression, request routing, error handling, and
+request batching.
+*Serialization: converting an in-memory object, like a user profile, into bytes that can travel over a network, and back again. Data in a program’s memory isn’t shaped for a wire.*
+9. directed acyclic graph (DAG) 
+10. Stateless Client 
 
  
 
